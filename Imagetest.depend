@@ -1,0 +1,10 @@
+# depslib dependency file v1.0
+1741741528 source:c:\sdl project\imagetest\main.cpp
+	<SDL.h>
+	<SDL_image.h>
+	<iostream>
+	<vector>
+	<random>
+	<algorithm>
+	<string>
+
