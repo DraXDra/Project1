@@ -1,0 +1,10 @@
+# depslib dependency file v1.0
+1746014637 source:c:\codeblock\game\main.cpp
+	<SDL.h>
+	<SDL_ttf.h>
+	<SDL_mixer.h>
+	<vector>
+	<cstdlib>
+	<ctime>
+	<string>
+
