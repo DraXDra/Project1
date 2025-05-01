@@ -33,6 +33,7 @@ private:
     SDL_Renderer* renderer;
     SDL_Texture* playerTexture;
     SDL_Texture* obstacleTexture;
+    SDL_Texture* backgroundTexture; // Thêm texture cho background
     Mix_Music* bgMusic;
     Mix_Chunk* hitSound;
     TTF_Font* font;
@@ -82,6 +83,11 @@ private:
     }
 
     bool loadAssets() {
+        backgroundTexture = IMG_LoadTexture(renderer, "assets/background.png");
+        if (!backgroundTexture) {
+            cerr << "Failed to load background texture: " << SDL_GetError() << endl;
+            return false;
+        }
         playerTexture = IMG_LoadTexture(renderer, "assets/player.png");
         if (!playerTexture) {
             cerr << "Failed to load player texture: " << SDL_GetError() << endl;
@@ -250,8 +256,9 @@ private:
     }
 
     void renderMenu() {
-        SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
-        SDL_RenderClear(renderer);
+        // Vẽ background trước
+        SDL_Rect bgRect = {0, 0, WINDOW_WIDTH, WINDOW_HEIGHT};
+        SDL_RenderCopy(renderer, backgroundTexture, nullptr, &bgRect);
 
         renderText("Dodge Game", WINDOW_WIDTH / 2 - 50, 100, textColor);
         renderText("High Score: " + to_string(highScore), WINDOW_WIDTH / 2 - 50, 150, textColor);
@@ -265,7 +272,7 @@ private:
 
 public:
     Game() : window(nullptr), renderer(nullptr), playerTexture(nullptr), obstacleTexture(nullptr),
-             bgMusic(nullptr), hitSound(nullptr), font(nullptr),
+             backgroundTexture(nullptr), bgMusic(nullptr), hitSound(nullptr), font(nullptr),
              playerX(WINDOW_WIDTH / 2.0f - PLAYER_WIDTH / 2.0f),
              playerY(WINDOW_HEIGHT / 2.0f - PLAYER_HEIGHT / 2.0f),
              targetX(playerX), targetY(playerY),
@@ -279,6 +286,7 @@ public:
         saveHighScore();
         if (playerTexture) SDL_DestroyTexture(playerTexture);
         if (obstacleTexture) SDL_DestroyTexture(obstacleTexture);
+        if (backgroundTexture) SDL_DestroyTexture(backgroundTexture);
         if (bgMusic) Mix_FreeMusic(bgMusic);
         if (hitSound) Mix_FreeChunk(hitSound);
         if (font) TTF_CloseFont(font);
@@ -373,8 +381,9 @@ public:
 
                 updateScore();
 
-                SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
-                SDL_RenderClear(renderer);
+                // Vẽ background trước
+                SDL_Rect bgRect = {0, 0, WINDOW_WIDTH, WINDOW_HEIGHT};
+                SDL_RenderCopy(renderer, backgroundTexture, nullptr, &bgRect);
 
                 SDL_Rect playerRect = {(int)playerX, (int)playerY, PLAYER_WIDTH, PLAYER_HEIGHT};
                 SDL_RenderCopy(renderer, playerTexture, nullptr, &playerRect);
@@ -389,8 +398,9 @@ public:
 
                 SDL_RenderPresent(renderer);
             } else if (state == GameState::GAME_OVER) {
-                SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
-                SDL_RenderClear(renderer);
+                // Vẽ background trước
+                SDL_Rect bgRect = {0, 0, WINDOW_WIDTH, WINDOW_HEIGHT};
+                SDL_RenderCopy(renderer, backgroundTexture, nullptr, &bgRect);
 
                 renderText("Game Over!", WINDOW_WIDTH / 2 - 70, WINDOW_HEIGHT / 2 - 50, textColor);
                 renderText("Score: " + to_string(score), WINDOW_WIDTH / 2 - 50, WINDOW_HEIGHT / 2, textColor);
