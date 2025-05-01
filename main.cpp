@@ -10,6 +10,8 @@
 #include <fstream>
 #include <string>
 
+using namespace std;
+
 const int WINDOW_WIDTH = 800;
 const int WINDOW_HEIGHT = 600;
 const int PLAYER_WIDTH = 50;
@@ -38,7 +40,7 @@ private:
     SDL_Color highlightColor = {255, 255, 0, 255};
     float playerX, playerY;
     float targetX, targetY;
-    std::vector<GameObject> objects;
+    vector<GameObject> objects;
     bool running;
     Uint32 lastSpawnTime;
     Uint32 gameStartTime;
@@ -50,30 +52,30 @@ private:
 
     bool initSDL() {
         if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO) < 0) {
-            std::cerr << "Không khởi tạo được SDL: " << SDL_GetError() << std::endl;
+            cerr << "Failed to initialize SDL: " << SDL_GetError() << endl;
             return false;
         }
         if (IMG_Init(IMG_INIT_PNG) != IMG_INIT_PNG) {
-            std::cerr << "Không khởi tạo được SDL_image: " << SDL_GetError() << std::endl;
+            cerr << "Failed to initialize SDL_image: " << SDL_GetError() << endl;
             return false;
         }
         if (Mix_OpenAudio(44100, MIX_DEFAULT_FORMAT, 2, 2048) < 0) {
-            std::cerr << "Không khởi tạo được SDL_mixer: " << Mix_GetError() << std::endl;
+            cerr << "Failed to initialize SDL_mixer: " << Mix_GetError() << endl;
             return false;
         }
         if (TTF_Init() < 0) {
-            std::cerr << "Không khởi tạo được SDL_ttf: " << TTF_GetError() << std::endl;
+            cerr << "Failed to initialize SDL_ttf: " << TTF_GetError() << endl;
             return false;
         }
         window = SDL_CreateWindow("Dodge", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
                                   WINDOW_WIDTH, WINDOW_HEIGHT, SDL_WINDOW_SHOWN);
         if (!window) {
-            std::cerr << "Không tạo được cửa sổ: " << SDL_GetError() << std::endl;
+            cerr << "Failed to create window: " << SDL_GetError() << endl;
             return false;
         }
         renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED);
         if (!renderer) {
-            std::cerr << "Không tạo được renderer: " << SDL_GetError() << std::endl;
+            cerr << "Failed to create renderer: " << SDL_GetError() << endl;
             return false;
         }
         return true;
@@ -83,22 +85,22 @@ private:
         playerTexture = IMG_LoadTexture(renderer, "assets/player.png");
         obstacleTexture = IMG_LoadTexture(renderer, "assets/obstacle.png");
         if (!playerTexture || !obstacleTexture) {
-            std::cerr << "Không tải được texture: " << SDL_GetError() << std::endl;
+            cerr << "Failed to load texture: " << SDL_GetError() << endl;
             return false;
         }
         bgMusic = Mix_LoadMUS("assets/background_music.mp3");
         if (!bgMusic) {
-            std::cerr << "Không tải được nhạc nền: " << Mix_GetError() << std::endl;
+            cerr << "Failed to load background music: " << Mix_GetError() << endl;
             return false;
         }
         hitSound = Mix_LoadWAV("assets/hit.wav");
         if (!hitSound) {
-            std::cerr << "Không tải được âm thanh: " << Mix_GetError() << std::endl;
+            cerr << "Failed to load sound effect: " << Mix_GetError() << endl;
             return false;
         }
         font = TTF_OpenFont("assets/arial.ttf", 24);
         if (!font) {
-            std::cerr << "Không tải được font: " << TTF_GetError() << std::endl;
+            cerr << "Failed to load font: " << TTF_GetError() << endl;
             return false;
         }
         return true;
@@ -108,25 +110,25 @@ private:
         GameObject obj;
         int side = rand() % 4;
         switch (side) {
-            case 0: // Từ trên
+            case 0: // From top
                 obj.x = rand() % (WINDOW_WIDTH - OBJECT_SIZE);
                 obj.y = -OBJECT_SIZE;
                 obj.dx = 0;
                 obj.dy = OBJECT_SPEED;
                 break;
-            case 1: // Từ dưới
+            case 1: // From bottom
                 obj.x = rand() % (WINDOW_WIDTH - OBJECT_SIZE);
                 obj.y = WINDOW_HEIGHT;
                 obj.dx = 0;
                 obj.dy = -OBJECT_SPEED;
                 break;
-            case 2: // Từ trái
+            case 2: // From left
                 obj.x = -OBJECT_SIZE;
                 obj.y = rand() % (WINDOW_HEIGHT - OBJECT_SIZE);
                 obj.dx = OBJECT_SPEED;
                 obj.dy = 0;
                 break;
-            case 3: // Từ phải
+            case 3: // From right
                 obj.x = WINDOW_WIDTH;
                 obj.y = rand() % (WINDOW_HEIGHT - OBJECT_SIZE);
                 obj.dx = -OBJECT_SPEED;
@@ -153,8 +155,8 @@ private:
             float moveX = (dx / dist) * PLAYER_SPEED;
             float moveY = (dy / dist) * PLAYER_SPEED;
 
-            if (std::abs(moveX) > std::abs(dx)) moveX = dx;
-            if (std::abs(moveY) > std::abs(dy)) moveY = dy;
+            if (abs(moveX) > abs(dx)) moveX = dx;
+            if (abs(moveY) > abs(dy)) moveY = dy;
 
             playerX += moveX;
             playerY += moveY;
@@ -167,9 +169,9 @@ private:
     }
 
     void saveGameState() {
-        std::ofstream outFile("savegame.txt");
+        ofstream outFile("savegame.txt");
         if (!outFile) {
-            std::cerr << "Không thể lưu trạng thái!" << std::endl;
+            cerr << "Failed to save game state!" << endl;
             return;
         }
         outFile << playerX << " " << playerY << "\n";
@@ -183,9 +185,9 @@ private:
     }
 
     bool loadGameState() {
-        std::ifstream inFile("savegame.txt");
+        ifstream inFile("savegame.txt");
         if (!inFile) {
-            std::cerr << "Không tìm thấy tệp lưu trạng thái!" << std::endl;
+            cerr << "Save game file not found!" << endl;
             return false;
         }
         float savedTime;
@@ -210,9 +212,9 @@ private:
     }
 
     void saveHighScore() {
-        std::ofstream outFile("highscore.txt");
+        ofstream outFile("highscore.txt");
         if (!outFile) {
-            std::cerr << "Không thể lưu high score!" << std::endl;
+            cerr << "Failed to save high score!" << endl;
             return;
         }
         outFile << highScore;
@@ -220,7 +222,7 @@ private:
     }
 
     void loadHighScore() {
-        std::ifstream inFile("highscore.txt");
+        ifstream inFile("highscore.txt");
         if (!inFile) {
             highScore = 0;
             return;
@@ -231,10 +233,10 @@ private:
 
     void updateScore() {
         Uint32 currentTime = SDL_GetTicks();
-        score = ((currentTime - gameStartTime) / 1000) * 10; // 1 giây = 10 điểm
+        score = ((currentTime - gameStartTime) / 1000) * 10; // 1 second = 10 points
     }
 
-    void renderText(const std::string& text, int x, int y, SDL_Color color) {
+    void renderText(const string& text, int x, int y, SDL_Color color) {
         SDL_Surface* surface = TTF_RenderText_Solid(font, text.c_str(), color);
         SDL_Texture* texture = SDL_CreateTextureFromSurface(renderer, surface);
         SDL_Rect dst = {x, y, surface->w, surface->h};
@@ -248,7 +250,7 @@ private:
         SDL_RenderClear(renderer);
 
         renderText("Dodge Game", WINDOW_WIDTH / 2 - 50, 100, textColor);
-        renderText("High Score: " + std::to_string(highScore), WINDOW_WIDTH / 2 - 50, 150, textColor);
+        renderText("High Score: " + to_string(highScore), WINDOW_WIDTH / 2 - 50, 150, textColor);
 
         renderText("Chơi", WINDOW_WIDTH / 2 - 20, 250, menuSelection == 0 ? highlightColor : textColor);
         renderText("Tải trạng thái", WINDOW_WIDTH / 2 - 50, 300, menuSelection == 1 ? highlightColor : textColor);
@@ -301,18 +303,18 @@ public:
                         } else if (event.key.keysym.sym == SDLK_DOWN) {
                             menuSelection = (menuSelection + 1) % 3;
                         } else if (event.key.keysym.sym == SDLK_RETURN) {
-                            if (menuSelection == 0) { // Chơi
+                            if (menuSelection == 0) { // Play
                                 state = GameState::PLAYING;
                                 gameStartTime = SDL_GetTicks();
                                 score = 0;
                                 objects.clear();
                                 Mix_PlayMusic(bgMusic, -1);
-                            } else if (menuSelection == 1) { // Tải trạng thái
+                            } else if (menuSelection == 1) { // Load state
                                 if (loadGameState()) {
                                     state = GameState::PLAYING;
                                     Mix_PlayMusic(bgMusic, -1);
                                 }
-                            } else if (menuSelection == 2) { // Thoát
+                            } else if (menuSelection == 2) { // Exit
                                 running = false;
                             }
                         }
@@ -378,7 +380,7 @@ public:
                     SDL_RenderCopy(renderer, obj.texture, nullptr, &objRect);
                 }
 
-                renderText("Điểm: " + std::to_string(score), 10, 10, textColor);
+                renderText("Điểm: " + to_string(score), 10, 10, textColor);
                 renderText("Nhấn S để lưu trạng thái", 10, 40, textColor);
 
                 SDL_RenderPresent(renderer);
@@ -387,7 +389,7 @@ public:
                 SDL_RenderClear(renderer);
 
                 renderText("Kết thúc trò chơi!", WINDOW_WIDTH / 2 - 70, WINDOW_HEIGHT / 2 - 50, textColor);
-                renderText("Điểm: " + std::to_string(score), WINDOW_WIDTH / 2 - 50, WINDOW_HEIGHT / 2, textColor);
+                renderText("Điểm: " + to_string(score), WINDOW_WIDTH / 2 - 50, WINDOW_HEIGHT / 2, textColor);
                 renderText("Nhấn Enter để quay lại menu", WINDOW_WIDTH / 2 - 110, WINDOW_HEIGHT / 2 + 50, textColor);
 
                 SDL_RenderPresent(renderer);
@@ -401,7 +403,7 @@ public:
 int main(int argc, char* argv[]) {
     Game game;
     if (!game.init()) {
-        std::cerr << "Khởi tạo thất bại!" << std::endl;
+        cerr << "Initialization failed!" << endl;
         return 1;
     }
     game.run();
