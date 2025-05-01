@@ -83,9 +83,13 @@ private:
 
     bool loadAssets() {
         playerTexture = IMG_LoadTexture(renderer, "assets/player.png");
+        if (!playerTexture) {
+            cerr << "Failed to load player texture: " << SDL_GetError() << endl;
+            return false;
+        }
         obstacleTexture = IMG_LoadTexture(renderer, "assets/obstacle.png");
-        if (!playerTexture || !obstacleTexture) {
-            cerr << "Failed to load texture: " << SDL_GetError() << endl;
+        if (!obstacleTexture) {
+            cerr << "Failed to load obstacle texture: " << SDL_GetError() << endl;
             return false;
         }
         bgMusic = Mix_LoadMUS("assets/background_music.mp3");
@@ -93,7 +97,7 @@ private:
             cerr << "Failed to load background music: " << Mix_GetError() << endl;
             return false;
         }
-        hitSound = Mix_LoadWAV("assets/hit.wav");
+        hitSound = Mix_LoadWAV("assets/hit.mp3");
         if (!hitSound) {
             cerr << "Failed to load sound effect: " << Mix_GetError() << endl;
             return false;
@@ -252,9 +256,9 @@ private:
         renderText("Dodge Game", WINDOW_WIDTH / 2 - 50, 100, textColor);
         renderText("High Score: " + to_string(highScore), WINDOW_WIDTH / 2 - 50, 150, textColor);
 
-        renderText("Chơi", WINDOW_WIDTH / 2 - 20, 250, menuSelection == 0 ? highlightColor : textColor);
-        renderText("Tải trạng thái", WINDOW_WIDTH / 2 - 50, 300, menuSelection == 1 ? highlightColor : textColor);
-        renderText("Thoát", WINDOW_WIDTH / 2 - 20, 350, menuSelection == 2 ? highlightColor : textColor);
+        renderText("Play", WINDOW_WIDTH / 2 - 20, 250, menuSelection == 0 ? highlightColor : textColor);
+        renderText("Load Game", WINDOW_WIDTH / 2 - 50, 300, menuSelection == 1 ? highlightColor : textColor);
+        renderText("Exit", WINDOW_WIDTH / 2 - 20, 350, menuSelection == 2 ? highlightColor : textColor);
 
         SDL_RenderPresent(renderer);
     }
@@ -380,17 +384,17 @@ public:
                     SDL_RenderCopy(renderer, obj.texture, nullptr, &objRect);
                 }
 
-                renderText("Điểm: " + to_string(score), 10, 10, textColor);
-                renderText("Nhấn S để lưu trạng thái", 10, 40, textColor);
+                renderText("Score: " + to_string(score), 10, 10, textColor);
+                renderText("Press S to save game", 10, 40, textColor);
 
                 SDL_RenderPresent(renderer);
             } else if (state == GameState::GAME_OVER) {
                 SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
                 SDL_RenderClear(renderer);
 
-                renderText("Kết thúc trò chơi!", WINDOW_WIDTH / 2 - 70, WINDOW_HEIGHT / 2 - 50, textColor);
-                renderText("Điểm: " + to_string(score), WINDOW_WIDTH / 2 - 50, WINDOW_HEIGHT / 2, textColor);
-                renderText("Nhấn Enter để quay lại menu", WINDOW_WIDTH / 2 - 110, WINDOW_HEIGHT / 2 + 50, textColor);
+                renderText("Game Over!", WINDOW_WIDTH / 2 - 70, WINDOW_HEIGHT / 2 - 50, textColor);
+                renderText("Score: " + to_string(score), WINDOW_WIDTH / 2 - 50, WINDOW_HEIGHT / 2, textColor);
+                renderText("Press Enter to return to menu", WINDOW_WIDTH / 2 - 110, WINDOW_HEIGHT / 2 + 50, textColor);
 
                 SDL_RenderPresent(renderer);
             }
