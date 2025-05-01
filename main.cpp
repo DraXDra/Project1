@@ -18,7 +18,9 @@ const int PLAYER_WIDTH = 50;
 const int PLAYER_HEIGHT = 50;
 const int OBJECT_SIZE = 30;
 const float PLAYER_SPEED = 5.0f;
-const float OBJECT_SPEED = 3.0f;
+const float INITIAL_OBJECT_SPEED = 3.0f; // Tốc độ ban đầu của chướng ngại vật
+const float SPEED_INCREMENT = 0.5f; // Tốc độ tăng thêm mỗi 10 giây
+const int SPEED_INCREASE_INTERVAL = 10000; // 10 giây (tính bằng mili giây)
 const int SPAWN_INTERVAL = 500; // ms
 
 struct GameObject {
@@ -33,7 +35,7 @@ private:
     SDL_Renderer* renderer;
     SDL_Texture* playerTexture;
     SDL_Texture* obstacleTexture;
-    SDL_Texture* backgroundTexture; // Thêm texture cho background
+    SDL_Texture* backgroundTexture;
     Mix_Music* bgMusic;
     Mix_Chunk* hitSound;
     TTF_Font* font;
@@ -47,6 +49,7 @@ private:
     Uint32 gameStartTime;
     int score;
     int highScore;
+    float currentObjectSpeed; // Tốc độ hiện tại của chướng ngại vật
     enum class GameState { MENU, PLAYING, GAME_OVER };
     GameState state;
     int menuSelection;
@@ -124,24 +127,24 @@ private:
                 obj.x = rand() % (WINDOW_WIDTH - OBJECT_SIZE);
                 obj.y = -OBJECT_SIZE;
                 obj.dx = 0;
-                obj.dy = OBJECT_SPEED;
+                obj.dy = currentObjectSpeed;
                 break;
             case 1: // From bottom
                 obj.x = rand() % (WINDOW_WIDTH - OBJECT_SIZE);
                 obj.y = WINDOW_HEIGHT;
                 obj.dx = 0;
-                obj.dy = -OBJECT_SPEED;
+                obj.dy = -currentObjectSpeed;
                 break;
             case 2: // From left
                 obj.x = -OBJECT_SIZE;
                 obj.y = rand() % (WINDOW_HEIGHT - OBJECT_SIZE);
-                obj.dx = OBJECT_SPEED;
+                obj.dx = currentObjectSpeed;
                 obj.dy = 0;
                 break;
             case 3: // From right
                 obj.x = WINDOW_WIDTH;
                 obj.y = rand() % (WINDOW_HEIGHT - OBJECT_SIZE);
-                obj.dx = -OBJECT_SPEED;
+                obj.dx = -currentObjectSpeed;
                 obj.dy = 0;
                 break;
         }
@@ -246,6 +249,13 @@ private:
         score = ((currentTime - gameStartTime) / 1000) * 10; // 1 second = 10 points
     }
 
+    void updateObjectSpeed() {
+        Uint32 currentTime = SDL_GetTicks();
+        Uint32 elapsedTime = currentTime - gameStartTime;
+        // Tăng tốc độ mỗi SPEED_INCREASE_INTERVAL (10 giây)
+        currentObjectSpeed = INITIAL_OBJECT_SPEED + (elapsedTime / SPEED_INCREASE_INTERVAL) * SPEED_INCREMENT;
+    }
+
     void renderText(const string& text, int x, int y, SDL_Color color) {
         SDL_Surface* surface = TTF_RenderText_Solid(font, text.c_str(), color);
         SDL_Texture* texture = SDL_CreateTextureFromSurface(renderer, surface);
@@ -256,7 +266,6 @@ private:
     }
 
     void renderMenu() {
-        // Vẽ background trước
         SDL_Rect bgRect = {0, 0, WINDOW_WIDTH, WINDOW_HEIGHT};
         SDL_RenderCopy(renderer, backgroundTexture, nullptr, &bgRect);
 
@@ -277,7 +286,8 @@ public:
              playerY(WINDOW_HEIGHT / 2.0f - PLAYER_HEIGHT / 2.0f),
              targetX(playerX), targetY(playerY),
              running(true), lastSpawnTime(0), gameStartTime(0),
-             score(0), highScore(0), state(GameState::MENU), menuSelection(0) {
+             score(0), highScore(0), currentObjectSpeed(INITIAL_OBJECT_SPEED),
+             state(GameState::MENU), menuSelection(0) {
         srand(time(nullptr));
         loadHighScore();
     }
@@ -320,6 +330,7 @@ public:
                                 gameStartTime = SDL_GetTicks();
                                 score = 0;
                                 objects.clear();
+                                currentObjectSpeed = INITIAL_OBJECT_SPEED; // Reset tốc độ khi bắt đầu lại
                                 Mix_PlayMusic(bgMusic, -1);
                             } else if (menuSelection == 1) { // Load state
                                 if (loadGameState()) {
@@ -352,6 +363,7 @@ public:
 
                 Uint32 currentTime = SDL_GetTicks();
                 if (currentTime - lastSpawnTime > SPAWN_INTERVAL) {
+                    updateObjectSpeed(); // Cập nhật tốc độ trước khi sinh chướng ngại vật
                     spawnObject();
                     lastSpawnTime = currentTime;
                 }
@@ -381,7 +393,6 @@ public:
 
                 updateScore();
 
-                // Vẽ background trước
                 SDL_Rect bgRect = {0, 0, WINDOW_WIDTH, WINDOW_HEIGHT};
                 SDL_RenderCopy(renderer, backgroundTexture, nullptr, &bgRect);
 
@@ -398,7 +409,6 @@ public:
 
                 SDL_RenderPresent(renderer);
             } else if (state == GameState::GAME_OVER) {
-                // Vẽ background trước
                 SDL_Rect bgRect = {0, 0, WINDOW_WIDTH, WINDOW_HEIGHT};
                 SDL_RenderCopy(renderer, backgroundTexture, nullptr, &bgRect);
 
