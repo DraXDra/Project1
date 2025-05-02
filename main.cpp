@@ -255,10 +255,12 @@ private:
         currentObjectSpeed = INITIAL_OBJECT_SPEED + (elapsedTime / SPEED_INCREASE_INTERVAL) * SPEED_INCREMENT;
     }
 
-    void renderText(const string& text, int x, int y, SDL_Color color) {
+    void renderText(const string& text, int y, SDL_Color color) {
         SDL_Surface* surface = TTF_RenderText_Solid(font, text.c_str(), color);
         SDL_Texture* texture = SDL_CreateTextureFromSurface(renderer, surface);
-        SDL_Rect dst = {x, y, surface->w, surface->h};
+        int textWidth, textHeight;
+        TTF_SizeText(font, text.c_str(), &textWidth, &textHeight);
+        SDL_Rect dst = {(WINDOW_WIDTH - textWidth) / 2, y, textWidth, textHeight};
         SDL_RenderCopy(renderer, texture, nullptr, &dst);
         SDL_FreeSurface(surface);
         SDL_DestroyTexture(texture);
@@ -268,12 +270,11 @@ private:
         SDL_Rect bgRect = {0, 0, WINDOW_WIDTH, WINDOW_HEIGHT};
         SDL_RenderCopy(renderer, backgroundTexture, nullptr, &bgRect);
 
-        renderText("Dodge Game", WINDOW_WIDTH / 2 - 50, 100, textColor);
-        renderText("High Score: " + to_string(highScore), WINDOW_WIDTH / 2 - 50, 150, textColor);
-
-        renderText("Play", WINDOW_WIDTH / 2 - 20, 250, menuSelection == 0 ? highlightColor : textColor);
-        renderText("Load Game", WINDOW_WIDTH / 2 - 50, 300, menuSelection == 1 ? highlightColor : textColor);
-        renderText("Exit", WINDOW_WIDTH / 2 - 20, 350, menuSelection == 2 ? highlightColor : textColor);
+        renderText("Dodge Game", 100, textColor);
+        renderText("High Score: " + to_string(highScore), 150, textColor);
+        renderText("Play", 250, menuSelection == 0 ? highlightColor : textColor);
+        renderText("Load Game", 300, menuSelection == 1 ? highlightColor : textColor);
+        renderText("Exit", 350, menuSelection == 2 ? highlightColor : textColor);
 
         SDL_RenderPresent(renderer);
     }
@@ -347,8 +348,8 @@ public:
                         targetY = event.motion.y - PLAYER_HEIGHT / 2.0f;
                     } else if (event.type == SDL_KEYDOWN && event.key.keysym.sym == SDLK_s) {
                         saveGameState();
-                        Mix_HaltMusic(); // Dừng nhạc nền
-                        state = GameState::MENU; // Quay lại menu sau khi lưu
+                        Mix_HaltMusic();
+                        state = GameState::MENU;
                     }
                 } else if (state == GameState::GAME_OVER) {
                     if (event.type == SDL_KEYDOWN && event.key.keysym.sym == SDLK_RETURN) {
@@ -405,17 +406,17 @@ public:
                     SDL_RenderCopy(renderer, obj.texture, nullptr, &objRect);
                 }
 
-                renderText("Score: " + to_string(score), 10, 10, textColor);
-                renderText("Press S to save game", 10, 40, textColor);
+                renderText("Score: " + to_string(score), 10, textColor);
+                renderText("Press S to save game", 40, textColor);
 
                 SDL_RenderPresent(renderer);
             } else if (state == GameState::GAME_OVER) {
                 SDL_Rect bgRect = {0, 0, WINDOW_WIDTH, WINDOW_HEIGHT};
                 SDL_RenderCopy(renderer, backgroundTexture, nullptr, &bgRect);
 
-                renderText("Game Over!", WINDOW_WIDTH / 2 - 70, WINDOW_HEIGHT / 2 - 50, textColor);
-                renderText("Score: " + to_string(score), WINDOW_WIDTH / 2 - 50, WINDOW_HEIGHT / 2, textColor);
-                renderText("Press Enter to return to menu", WINDOW_WIDTH / 2 - 110, WINDOW_HEIGHT / 2 + 50, textColor);
+                renderText("Game Over!", (WINDOW_HEIGHT / 2) - 50, textColor);
+                renderText("Score: " + to_string(score), WINDOW_HEIGHT / 2, textColor);
+                renderText("Press Enter to return to menu", (WINDOW_HEIGHT / 2) + 50, textColor);
 
                 SDL_RenderPresent(renderer);
             }
