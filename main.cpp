@@ -18,9 +18,9 @@ const int PLAYER_WIDTH = 50;
 const int PLAYER_HEIGHT = 50;
 const int OBJECT_SIZE = 30;
 const float PLAYER_SPEED = 5.0f;
-const float INITIAL_OBJECT_SPEED = 3.0f; // Tốc độ ban đầu của chướng ngại vật
-const float SPEED_INCREMENT = 0.5f; // Tốc độ tăng thêm mỗi 10 giây
-const int SPEED_INCREASE_INTERVAL = 10000; // 10 giây (tính bằng mili giây)
+const float INITIAL_OBJECT_SPEED = 3.0f;
+const float SPEED_INCREMENT = 0.5f;
+const int SPEED_INCREASE_INTERVAL = 10000; // 10 giây
 const int SPAWN_INTERVAL = 500; // ms
 
 struct GameObject {
@@ -49,7 +49,7 @@ private:
     Uint32 gameStartTime;
     int score;
     int highScore;
-    float currentObjectSpeed; // Tốc độ hiện tại của chướng ngại vật
+    float currentObjectSpeed;
     enum class GameState { MENU, PLAYING, GAME_OVER };
     GameState state;
     int menuSelection;
@@ -252,7 +252,6 @@ private:
     void updateObjectSpeed() {
         Uint32 currentTime = SDL_GetTicks();
         Uint32 elapsedTime = currentTime - gameStartTime;
-        // Tăng tốc độ mỗi SPEED_INCREASE_INTERVAL (10 giây)
         currentObjectSpeed = INITIAL_OBJECT_SPEED + (elapsedTime / SPEED_INCREASE_INTERVAL) * SPEED_INCREMENT;
     }
 
@@ -330,7 +329,7 @@ public:
                                 gameStartTime = SDL_GetTicks();
                                 score = 0;
                                 objects.clear();
-                                currentObjectSpeed = INITIAL_OBJECT_SPEED; // Reset tốc độ khi bắt đầu lại
+                                currentObjectSpeed = INITIAL_OBJECT_SPEED;
                                 Mix_PlayMusic(bgMusic, -1);
                             } else if (menuSelection == 1) { // Load state
                                 if (loadGameState()) {
@@ -348,6 +347,8 @@ public:
                         targetY = event.motion.y - PLAYER_HEIGHT / 2.0f;
                     } else if (event.type == SDL_KEYDOWN && event.key.keysym.sym == SDLK_s) {
                         saveGameState();
+                        Mix_HaltMusic(); // Dừng nhạc nền
+                        state = GameState::MENU; // Quay lại menu sau khi lưu
                     }
                 } else if (state == GameState::GAME_OVER) {
                     if (event.type == SDL_KEYDOWN && event.key.keysym.sym == SDLK_RETURN) {
@@ -363,7 +364,7 @@ public:
 
                 Uint32 currentTime = SDL_GetTicks();
                 if (currentTime - lastSpawnTime > SPAWN_INTERVAL) {
-                    updateObjectSpeed(); // Cập nhật tốc độ trước khi sinh chướng ngại vật
+                    updateObjectSpeed();
                     spawnObject();
                     lastSpawnTime = currentTime;
                 }
