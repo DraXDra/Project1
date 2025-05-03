@@ -358,6 +358,7 @@ public:
                                 objects.clear();
                                 currentObjectSpeed = INITIAL_OBJECT_SPEED;
                                 currentSpawnInterval = SPAWN_INTERVAL;
+                                lastFlashTime = gameStartTime - FLASH_COOLDOWN - 1; // Đặt Flash ở trạng thái Ready
                                 Mix_PlayMusic(bgMusic, -1);
                             } else if (menuSelection == 1) { // Load state
                                 if (loadGameState()) {
@@ -472,11 +473,12 @@ public:
                 SDL_RenderCopy(renderer, logoTexture, nullptr, &logoRect);
 
                 // Hiển thị thời gian hồi chiêu hoặc "Ready" trên logo
-                int cooldownTimeRemaining = (FLASH_COOLDOWN - (currentTime - lastFlashTime)) / 1000;
-                if (cooldownTimeRemaining > 0) {
+                Uint32 timeSinceLastFlash = currentTime - lastFlashTime;
+                if (timeSinceLastFlash < FLASH_COOLDOWN) {
+                    int cooldownTimeRemaining = (FLASH_COOLDOWN - timeSinceLastFlash) / 1000;
                     string cooldownText = to_string(cooldownTimeRemaining) + "s";
                     renderTextCentered(cooldownText, WINDOW_WIDTH / 2, WINDOW_HEIGHT - 110, textColor);
-                } else if (currentTime <= lastFlashTime + FLASH_COOLDOWN + READY_DISPLAY_TIME) {
+                } else if (timeSinceLastFlash < FLASH_COOLDOWN + READY_DISPLAY_TIME) {
                     renderTextCentered("Ready", WINDOW_WIDTH / 2, WINDOW_HEIGHT - 110, textColor);
                 }
 
