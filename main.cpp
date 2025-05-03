@@ -275,6 +275,17 @@ private:
         SDL_DestroyTexture(texture);
     }
 
+    void renderTextCentered(const string& text, int x, int y, SDL_Color color) {
+        SDL_Surface* surface = TTF_RenderText_Solid(font, text.c_str(), color);
+        SDL_Texture* texture = SDL_CreateTextureFromSurface(renderer, surface);
+        int textWidth, textHeight;
+        TTF_SizeText(font, text.c_str(), &textWidth, &textHeight);
+        SDL_Rect dst = {x - textWidth / 2, y, textWidth, textHeight};
+        SDL_RenderCopy(renderer, texture, nullptr, &dst);
+        SDL_FreeSurface(surface);
+        SDL_DestroyTexture(texture);
+    }
+
     void renderMenu() {
         SDL_Rect bgRect = {0, 0, WINDOW_WIDTH, WINDOW_HEIGHT};
         SDL_RenderCopy(renderer, backgroundTexture, nullptr, &bgRect);
@@ -356,28 +367,30 @@ public:
                     if (event.type == SDL_MOUSEMOTION) {
                         targetX = event.motion.x - PLAYER_WIDTH / 2.0f;
                         targetY = event.motion.y - PLAYER_HEIGHT / 2.0f;
-                    } else if (event.type == SDL_KEYDOWN && event.key.keysym.sym == SDLK_s) {
-                        Uint32 currentTime = SDL_GetTicks();
-                        if (currentTime - lastFlashTime >= FLASH_COOLDOWN) {
-                            // Tính hướng dịch chuyển
-                            float dx = targetX - playerX;
-                            float dy = targetY - playerY;
-                            float dist = distance(playerX, playerY, targetX, targetY);
-                            if (dist > 0) {
-                                float moveX = (dx / dist) * FLASH_DISTANCE;
-                                float moveY = (dy / dist) * FLASH_DISTANCE;
-                                playerX += moveX;
-                                playerY += moveY;
+                    } else if (event.type == SDL_KEYDOWN) {
+                        if (event.key.keysym.sym == SDLK_f) { // Sử dụng phím F để flash
+                            Uint32 currentTime = SDL_GetTicks();
+                            if (currentTime - lastFlashTime >= FLASH_COOLDOWN) {
+                                // Tính hướng dịch chuyển
+                                float dx = targetX - playerX;
+                                float dy = targetY - playerY;
+                                float dist = distance(playerX, playerY, targetX, targetY);
+                                if (dist > 0) {
+                                    float moveX = (dx / dist) * FLASH_DISTANCE;
+                                    float moveY = (dy / dist) * FLASH_DISTANCE;
+                                    playerX += moveX;
+                                    playerY += moveY;
 
-                                // Giới hạn trong màn hình
-                                if (playerX < 0) playerX = 0;
-                                if (playerX > WINDOW_WIDTH - PLAYER_WIDTH) playerX = WINDOW_WIDTH - PLAYER_WIDTH;
-                                if (playerY < 0) playerY = 0;
-                                if (playerY > WINDOW_HEIGHT - PLAYER_HEIGHT) playerY = WINDOW_HEIGHT - PLAYER_HEIGHT;
+                                    // Giới hạn trong màn hình
+                                    if (playerX < 0) playerX = 0;
+                                    if (playerX > WINDOW_WIDTH - PLAYER_WIDTH) playerX = WINDOW_WIDTH - PLAYER_WIDTH;
+                                    if (playerY < 0) playerY = 0;
+                                    if (playerY > WINDOW_HEIGHT - PLAYER_HEIGHT) playerY = WINDOW_HEIGHT - PLAYER_HEIGHT;
 
-                                lastFlashTime = currentTime;
+                                    lastFlashTime = currentTime;
+                                }
                             }
-                        } else {
+                        } else if (event.key.keysym.sym == SDLK_s) { // Phím S để lưu game
                             saveGameState();
                             Mix_HaltMusic();
                             state = GameState::MENU;
@@ -439,11 +452,20 @@ public:
                 }
 
                 renderText("Score: " + to_string(score), 10, textColor);
-                renderText("Press S to flash (15s cooldown)", 40, textColor);
+                renderText("Press S to save game", 40, textColor);
 
                 // Vẽ logo chỉ trong gameplay
-                SDL_Rect logoRect = {(WINDOW_WIDTH / 2) - 50, WINDOW_HEIGHT - 100, 100, 50};
+                SDL_Rect logoRect = {(WINDOW_WIDTH / 2) - 25, WINDOW_HEIGHT - 80, 50, 50}; // Kích thước logo 50x50
                 SDL_RenderCopy(renderer, logoTexture, nullptr, &logoRect);
+
+                // Hiển thị thời gian hồi chiêu trên logo
+                int cooldownTimeRemaining = (FLASH_COOLDOWN - (currentTime - lastFlashTime)) / 1000;
+                if (cooldownTimeRemaining > 0) {
+                    string cooldownText = to_string(cooldownTimeRemaining) + "s";
+                    renderTextCentered(cooldownText, WINDOW_WIDTH / 2, WINDOW_HEIGHT - 110, textColor);
+                } else {
+                    renderTextCentered("Ready", WINDOW_WIDTH / 2, WINDOW_HEIGHT - 110, textColor);
+                }
 
                 SDL_RenderPresent(renderer);
             } else if (state == GameState::GAME_OVER) {
