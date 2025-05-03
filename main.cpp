@@ -22,6 +22,8 @@ const float INITIAL_OBJECT_SPEED = 3.0f;
 const float SPEED_INCREMENT = 0.5f;
 const int SPEED_INCREASE_INTERVAL = 10000; // 10 giây
 const int SPAWN_INTERVAL = 500; // ms
+const int FLASH_COOLDOWN = 15000; // 15 giây (mili giây)
+const int FLASH_DISTANCE = 200; // Khoảng cách dịch chuyển
 
 struct GameObject {
     float x, y;
@@ -36,6 +38,7 @@ private:
     SDL_Texture* playerTexture;
     SDL_Texture* obstacleTexture;
     SDL_Texture* backgroundTexture;
+    SDL_Texture* logoTexture; // Texture cho logo
     Mix_Music* bgMusic;
     Mix_Chunk* hitSound;
     TTF_Font* font;
@@ -47,6 +50,7 @@ private:
     bool running;
     Uint32 lastSpawnTime;
     Uint32 gameStartTime;
+    Uint32 lastFlashTime; // Thời gian sử dụng chiêu thức flash lần cuối
     int score;
     int highScore;
     float currentObjectSpeed;
@@ -99,6 +103,11 @@ private:
         obstacleTexture = IMG_LoadTexture(renderer, "assets/obstacle.png");
         if (!obstacleTexture) {
             cerr << "Failed to load obstacle texture: " << SDL_GetError() << endl;
+            return false;
+        }
+        logoTexture = IMG_LoadTexture(renderer, "assets/logo.png"); // Tải logo
+        if (!logoTexture) {
+            cerr << "Failed to load logo texture: " << SDL_GetError() << endl;
             return false;
         }
         bgMusic = Mix_LoadMUS("assets/background_music.mp3");
@@ -281,11 +290,11 @@ private:
 
 public:
     Game() : window(nullptr), renderer(nullptr), playerTexture(nullptr), obstacleTexture(nullptr),
-             backgroundTexture(nullptr), bgMusic(nullptr), hitSound(nullptr), font(nullptr),
+             backgroundTexture(nullptr), logoTexture(nullptr), bgMusic(nullptr), hitSound(nullptr), font(nullptr),
              playerX(WINDOW_WIDTH / 2.0f - PLAYER_WIDTH / 2.0f),
              playerY(WINDOW_HEIGHT / 2.0f - PLAYER_HEIGHT / 2.0f),
              targetX(playerX), targetY(playerY),
-             running(true), lastSpawnTime(0), gameStartTime(0),
+             running(true), lastSpawnTime(0), gameStartTime(0), lastFlashTime(0),
              score(0), highScore(0), currentObjectSpeed(INITIAL_OBJECT_SPEED),
              state(GameState::MENU), menuSelection(0) {
         srand(time(nullptr));
@@ -297,6 +306,7 @@ public:
         if (playerTexture) SDL_DestroyTexture(playerTexture);
         if (obstacleTexture) SDL_DestroyTexture(obstacleTexture);
         if (backgroundTexture) SDL_DestroyTexture(backgroundTexture);
+        if (logoTexture) SDL_DestroyTexture(logoTexture); // Giải phóng logo
         if (bgMusic) Mix_FreeMusic(bgMusic);
         if (hitSound) Mix_FreeChunk(hitSound);
         if (font) TTF_CloseFont(font);
@@ -347,9 +357,31 @@ public:
                         targetX = event.motion.x - PLAYER_WIDTH / 2.0f;
                         targetY = event.motion.y - PLAYER_HEIGHT / 2.0f;
                     } else if (event.type == SDL_KEYDOWN && event.key.keysym.sym == SDLK_s) {
-                        saveGameState();
-                        Mix_HaltMusic();
-                        state = GameState::MENU;
+                        Uint32 currentTime = SDL_GetTicks();
+                        if (currentTime - lastFlashTime >= FLASH_COOLDOWN) {
+                            // Tính hướng dịch chuyển
+                            float dx = targetX - playerX;
+                            float dy = targetY - playerY;
+                            float dist = distance(playerX, playerY, targetX, targetY);
+                            if (dist > 0) {
+                                float moveX = (dx / dist) * FLASH_DISTANCE;
+                                float moveY = (dy / dist) * FLASH_DISTANCE;
+                                playerX += moveX;
+                                playerY += moveY;
+
+                                // Giới hạn trong màn hình
+                                if (playerX < 0) playerX = 0;
+                                if (playerX > WINDOW_WIDTH - PLAYER_WIDTH) playerX = WINDOW_WIDTH - PLAYER_WIDTH;
+                                if (playerY < 0) playerY = 0;
+                                if (playerY > WINDOW_HEIGHT - PLAYER_HEIGHT) playerY = WINDOW_HEIGHT - PLAYER_HEIGHT;
+
+                                lastFlashTime = currentTime;
+                            }
+                        } else {
+                            saveGameState();
+                            Mix_HaltMusic();
+                            state = GameState::MENU;
+                        }
                     }
                 } else if (state == GameState::GAME_OVER) {
                     if (event.type == SDL_KEYDOWN && event.key.keysym.sym == SDLK_RETURN) {
@@ -407,7 +439,11 @@ public:
                 }
 
                 renderText("Score: " + to_string(score), 10, textColor);
-                renderText("Press S to save game", 40, textColor);
+                renderText("Press S to flash (15s cooldown)", 40, textColor);
+
+                // Vẽ logo chỉ trong gameplay
+                SDL_Rect logoRect = {(WINDOW_WIDTH / 2) - 50, WINDOW_HEIGHT - 100, 100, 50};
+                SDL_RenderCopy(renderer, logoTexture, nullptr, &logoRect);
 
                 SDL_RenderPresent(renderer);
             } else if (state == GameState::GAME_OVER) {
