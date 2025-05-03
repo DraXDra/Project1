@@ -473,11 +473,14 @@ public:
                     Uint32 elapsedTime = currentTime - gameStartTime;
                     if (elapsedTime >= SURVIVAL_RUSH_DURATION) {
                         Mix_HaltMusic();
-                        state = GameState::GAME_OVER;
+                        updateScore(); // Cập nhật điểm số cuối cùng
+                        cout << "Survival Rush ended. Final score: " << score << endl;
                         if (score > highScoreSurvivalRush) {
                             highScoreSurvivalRush = score;
                             saveHighScores();
+                            cout << "New high score (Survival Rush): " << highScoreSurvivalRush << endl;
                         }
+                        state = GameState::GAME_OVER;
                         continue;
                     }
                 }
@@ -502,19 +505,23 @@ public:
                                        it->x, it->y, OBJECT_SIZE, OBJECT_SIZE)) {
                         Mix_PlayChannel(-1, hitSound, 0);
                         Mix_HaltMusic();
-                        state = GameState::GAME_OVER;
+                        updateScore(); // Cập nhật điểm số cuối cùng
+                        cout << "Collision detected. Final score: " << score << endl;
                         if (state == GameState::PLAYING && score > highScoreClassic) {
                             highScoreClassic = score;
                             saveHighScores();
+                            cout << "New high score (Classic): " << highScoreClassic << endl;
                         } else if (state == GameState::PLAYING_SURVIVAL && score > highScoreSurvivalRush) {
                             highScoreSurvivalRush = score;
                             saveHighScores();
+                            cout << "New high score (Survival Rush): " << highScoreSurvivalRush << endl;
                         }
+                        state = GameState::GAME_OVER;
                     }
                     ++it;
                 }
 
-                updateScore();
+                updateScore(); // Cập nhật điểm số liên tục
 
                 SDL_Rect bgRect = {0, 0, WINDOW_WIDTH, WINDOW_HEIGHT};
                 SDL_RenderCopy(renderer, backgroundTexture, nullptr, &bgRect);
