@@ -1,5 +1,5 @@
 # depslib dependency file v1.0
-1746106123 source:c:\codeblock\game\main.cpp
+1746267180 source:c:\codeblock\game\main.cpp
 	<SDL.h>
 	<SDL_image.h>
 	<SDL_mixer.h>

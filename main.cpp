@@ -21,12 +21,14 @@ const float PLAYER_SPEED = 5.0f;
 const float INITIAL_OBJECT_SPEED = 3.0f;
 const float SPEED_INCREMENT = 0.5f;
 const int SPEED_INCREASE_INTERVAL = 10000; // 10 giây
-const int SPAWN_INTERVAL = 500; // Ban đầu 0.5 giây
-const int SPAWN_INTERVAL_DECREASE_RATE = 50; // Giảm 50ms mỗi 30 giây
+const int SPAWN_INTERVAL = 500; // Ban đầu 0.5 giây (Classic)
+const int SPAWN_INTERVAL_SURVIVAL = 200; // 0.2 giây (Survival Rush)
+const int SPAWN_INTERVAL_DECREASE_RATE = 50; // Giảm 50ms mỗi 30 giây (Classic)
 const int SPAWN_INTERVAL_MIN = 100; // Giới hạn tối thiểu
 const int FLASH_COOLDOWN = 15000; // 15 giây (mili giây)
 const int FLASH_DISTANCE = 200; // Khoảng cách dịch chuyển
 const int READY_DISPLAY_TIME = 15000; // 15 giây hiển thị "Ready"
+const int SURVIVAL_RUSH_DURATION = 60000; // 60 giây (Survival Rush)
 
 struct GameObject {
     float x, y;
@@ -55,10 +57,11 @@ private:
     Uint32 gameStartTime;
     Uint32 lastFlashTime; // Thời gian sử dụng chiêu thức flash lần cuối
     int score;
-    int highScore;
+    int highScoreClassic; // Highscore cho chế độ Classic
+    int highScoreSurvivalRush; // Highscore cho chế độ Survival Rush
     float currentObjectSpeed;
     int currentSpawnInterval; // Khoảng thời gian spawn hiện tại
-    enum class GameState { MENU, PLAYING, GAME_OVER };
+    enum class GameState { MENU, PLAYING, PLAYING_SURVIVAL, GAME_OVER };
     GameState state;
     int menuSelection;
 
@@ -237,24 +240,44 @@ private:
         return true;
     }
 
-    void saveHighScore() {
-        ofstream outFile("highscore.txt");
-        if (!outFile) {
-            cerr << "Failed to save high score!" << endl;
+    void saveHighScores() {
+        // Lưu highscore Classic
+        ofstream outFileClassic("highscore_classic.txt");
+        if (!outFileClassic) {
+            cerr << "Failed to save high score (Classic)!" << endl;
             return;
         }
-        outFile << highScore;
-        outFile.close();
+        outFileClassic << highScoreClassic;
+        outFileClassic.close();
+
+        // Lưu highscore Survival Rush
+        ofstream outFileSurvival("highscore_survivalrush.txt");
+        if (!outFileSurvival) {
+            cerr << "Failed to save high score (Survival Rush)!" << endl;
+            return;
+        }
+        outFileSurvival << highScoreSurvivalRush;
+        outFileSurvival.close();
     }
 
-    void loadHighScore() {
-        ifstream inFile("highscore.txt");
-        if (!inFile) {
-            highScore = 0;
-            return;
+    void loadHighScores() {
+        // Tải highscore Classic
+        ifstream inFileClassic("highscore_classic.txt");
+        if (!inFileClassic) {
+            highScoreClassic = 0;
+        } else {
+            inFileClassic >> highScoreClassic;
+            inFileClassic.close();
         }
-        inFile >> highScore;
-        inFile.close();
+
+        // Tải highscore Survival Rush
+        ifstream inFileSurvival("highscore_survivalrush.txt");
+        if (!inFileSurvival) {
+            highScoreSurvivalRush = 0;
+        } else {
+            inFileSurvival >> highScoreSurvivalRush;
+            inFileSurvival.close();
+        }
     }
 
     void updateScore() {
@@ -263,9 +286,11 @@ private:
     }
 
     void updateObjectSpeed() {
-        Uint32 currentTime = SDL_GetTicks();
-        Uint32 elapsedTime = currentTime - gameStartTime;
-        currentObjectSpeed = INITIAL_OBJECT_SPEED + (elapsedTime / SPEED_INCREASE_INTERVAL) * SPEED_INCREMENT;
+        if (state != GameState::PLAYING_SURVIVAL) { // Không tăng tốc độ trong Survival Rush
+            Uint32 currentTime = SDL_GetTicks();
+            Uint32 elapsedTime = currentTime - gameStartTime;
+            currentObjectSpeed = INITIAL_OBJECT_SPEED + (elapsedTime / SPEED_INCREASE_INTERVAL) * SPEED_INCREMENT;
+        }
     }
 
     void renderText(const string& text, int y, SDL_Color color) {
@@ -295,10 +320,17 @@ private:
         SDL_RenderCopy(renderer, backgroundTexture, nullptr, &bgRect);
 
         renderText("Dodge Game", 100, textColor);
-        renderText("High Score: " + to_string(highScore), 150, textColor);
-        renderText("Play", 250, menuSelection == 0 ? highlightColor : textColor);
-        renderText("Load Game", 300, menuSelection == 1 ? highlightColor : textColor);
-        renderText("Exit", 350, menuSelection == 2 ? highlightColor : textColor);
+        if (menuSelection == 0) {
+            renderText("High Score (Classic): " + to_string(highScoreClassic), 150, textColor);
+        } else if (menuSelection == 1) {
+            renderText("High Score (Survival Rush): " + to_string(highScoreSurvivalRush), 150, textColor);
+        } else {
+            renderText("High Score: " + to_string(highScoreClassic), 150, textColor); // Mặc định hiển thị Classic
+        }
+        renderText("Play (Classic)", 250, menuSelection == 0 ? highlightColor : textColor);
+        renderText("Survival Rush", 300, menuSelection == 1 ? highlightColor : textColor);
+        renderText("Load Game", 350, menuSelection == 2 ? highlightColor : textColor);
+        renderText("Exit", 400, menuSelection == 3 ? highlightColor : textColor);
 
         SDL_RenderPresent(renderer);
     }
@@ -310,15 +342,15 @@ public:
              playerY(WINDOW_HEIGHT / 2.0f - PLAYER_HEIGHT / 2.0f),
              targetX(playerX), targetY(playerY),
              running(true), lastSpawnTime(0), gameStartTime(0), lastFlashTime(0),
-             score(0), highScore(0), currentObjectSpeed(INITIAL_OBJECT_SPEED),
+             score(0), highScoreClassic(0), highScoreSurvivalRush(0), currentObjectSpeed(INITIAL_OBJECT_SPEED),
              currentSpawnInterval(SPAWN_INTERVAL),
              state(GameState::MENU), menuSelection(0) {
         srand(time(nullptr));
-        loadHighScore();
+        loadHighScores();
     }
 
     ~Game() {
-        saveHighScore();
+        saveHighScores();
         if (playerTexture) SDL_DestroyTexture(playerTexture);
         if (obstacleTexture) SDL_DestroyTexture(obstacleTexture);
         if (backgroundTexture) SDL_DestroyTexture(backgroundTexture);
@@ -347,11 +379,11 @@ public:
                 } else if (state == GameState::MENU) {
                     if (event.type == SDL_KEYDOWN) {
                         if (event.key.keysym.sym == SDLK_UP) {
-                            menuSelection = (menuSelection - 1 + 3) % 3;
+                            menuSelection = (menuSelection - 1 + 4) % 4;
                         } else if (event.key.keysym.sym == SDLK_DOWN) {
-                            menuSelection = (menuSelection + 1) % 3;
+                            menuSelection = (menuSelection + 1) % 4;
                         } else if (event.key.keysym.sym == SDLK_RETURN) {
-                            if (menuSelection == 0) { // Play
+                            if (menuSelection == 0) { // Play (Classic)
                                 state = GameState::PLAYING;
                                 gameStartTime = SDL_GetTicks();
                                 score = 0;
@@ -360,17 +392,26 @@ public:
                                 currentSpawnInterval = SPAWN_INTERVAL;
                                 lastFlashTime = gameStartTime - FLASH_COOLDOWN - 1; // Đặt Flash ở trạng thái Ready
                                 Mix_PlayMusic(bgMusic, -1);
-                            } else if (menuSelection == 1) { // Load state
+                            } else if (menuSelection == 1) { // Survival Rush
+                                state = GameState::PLAYING_SURVIVAL;
+                                gameStartTime = SDL_GetTicks();
+                                score = 0;
+                                objects.clear();
+                                currentObjectSpeed = INITIAL_OBJECT_SPEED;
+                                currentSpawnInterval = SPAWN_INTERVAL_SURVIVAL; // Mật độ cao ngay từ đầu
+                                lastFlashTime = gameStartTime - FLASH_COOLDOWN - 1; // Đặt Flash ở trạng thái Ready
+                                Mix_PlayMusic(bgMusic, -1);
+                            } else if (menuSelection == 2) { // Load state
                                 if (loadGameState()) {
                                     state = GameState::PLAYING;
                                     Mix_PlayMusic(bgMusic, -1);
                                 }
-                            } else if (menuSelection == 2) { // Exit
+                            } else if (menuSelection == 3) { // Exit
                                 running = false;
                             }
                         }
                     }
-                } else if (state == GameState::PLAYING) {
+                } else if (state == GameState::PLAYING || state == GameState::PLAYING_SURVIVAL) {
                     if (event.type == SDL_MOUSEMOTION) {
                         targetX = event.motion.x - PLAYER_WIDTH / 2.0f;
                         targetY = event.motion.y - PLAYER_HEIGHT / 2.0f;
@@ -397,10 +438,12 @@ public:
                                     lastFlashTime = currentTime;
                                 }
                             }
-                        } else if (event.key.keysym.sym == SDLK_s) { // Phím S để lưu game
-                            saveGameState();
-                            Mix_HaltMusic();
-                            state = GameState::MENU;
+                        } else if (event.key.keysym.sym == SDLK_s) { // Phím S để lưu game (chỉ ở chế độ Classic)
+                            if (state == GameState::PLAYING) {
+                                saveGameState();
+                                Mix_HaltMusic();
+                                state = GameState::MENU;
+                            }
                         }
                     }
                 } else if (state == GameState::GAME_OVER) {
@@ -412,15 +455,31 @@ public:
 
             if (state == GameState::MENU) {
                 renderMenu();
-            } else if (state == GameState::PLAYING) {
+            } else if (state == GameState::PLAYING || state == GameState::PLAYING_SURVIVAL) {
                 movePlayerToTarget();
 
                 Uint32 currentTime = SDL_GetTicks();
-                // Giảm SPAWN_INTERVAL theo thời gian
-                Uint32 elapsedTime = currentTime - gameStartTime;
-                if (elapsedTime / 30000 > 0) { // Mỗi 30 giây
-                    int decreaseCount = elapsedTime / 30000; // Số lần giảm
-                    currentSpawnInterval = max(SPAWN_INTERVAL - (decreaseCount * SPAWN_INTERVAL_DECREASE_RATE), SPAWN_INTERVAL_MIN);
+                if (state == GameState::PLAYING) {
+                    // Giảm SPAWN_INTERVAL theo thời gian (chỉ ở chế độ Classic)
+                    Uint32 elapsedTime = currentTime - gameStartTime;
+                    if (elapsedTime / 30000 > 0) { // Mỗi 30 giây
+                        int decreaseCount = elapsedTime / 30000; // Số lần giảm
+                        currentSpawnInterval = max(SPAWN_INTERVAL - (decreaseCount * SPAWN_INTERVAL_DECREASE_RATE), SPAWN_INTERVAL_MIN);
+                    }
+                }
+
+                // Kiểm tra thời gian trong Survival Rush
+                if (state == GameState::PLAYING_SURVIVAL) {
+                    Uint32 elapsedTime = currentTime - gameStartTime;
+                    if (elapsedTime >= SURVIVAL_RUSH_DURATION) {
+                        Mix_HaltMusic();
+                        state = GameState::GAME_OVER;
+                        if (score > highScoreSurvivalRush) {
+                            highScoreSurvivalRush = score;
+                            saveHighScores();
+                        }
+                        continue;
+                    }
                 }
 
                 if (currentTime - lastSpawnTime > currentSpawnInterval) {
@@ -444,9 +503,12 @@ public:
                         Mix_PlayChannel(-1, hitSound, 0);
                         Mix_HaltMusic();
                         state = GameState::GAME_OVER;
-                        if (score > highScore) {
-                            highScore = score;
-                            saveHighScore();
+                        if (state == GameState::PLAYING && score > highScoreClassic) {
+                            highScoreClassic = score;
+                            saveHighScores();
+                        } else if (state == GameState::PLAYING_SURVIVAL && score > highScoreSurvivalRush) {
+                            highScoreSurvivalRush = score;
+                            saveHighScores();
                         }
                     }
                     ++it;
@@ -466,7 +528,12 @@ public:
                 }
 
                 renderText("Score: " + to_string(score), 10, textColor);
-                renderText("Press S to save game", 40, textColor);
+                if (state == GameState::PLAYING) {
+                    renderText("Press S to save game", 40, textColor);
+                } else if (state == GameState::PLAYING_SURVIVAL) {
+                    int timeLeft = (SURVIVAL_RUSH_DURATION - (currentTime - gameStartTime)) / 1000;
+                    renderText("Time Left: " + to_string(timeLeft) + "s", 40, textColor);
+                }
 
                 // Vẽ logo chỉ trong gameplay
                 SDL_Rect logoRect = {(WINDOW_WIDTH / 2) - 25, WINDOW_HEIGHT - 80, 50, 50}; // Kích thước logo 50x50
