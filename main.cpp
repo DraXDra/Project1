@@ -325,7 +325,7 @@ private:
         } else if (menuSelection == 1) {
             renderText("High Score (Survival Rush): " + to_string(highScoreSurvivalRush), 150, textColor);
         } else {
-            renderText("High Score: " + to_string(highScoreClassic), 150, textColor); // Mặc định hiển thị Classic
+            renderText("High Score (Classic): " + to_string(highScoreClassic), 150, textColor); // Mặc định Classic
         }
         renderText("Play (Classic)", 250, menuSelection == 0 ? highlightColor : textColor);
         renderText("Survival Rush", 300, menuSelection == 1 ? highlightColor : textColor);
