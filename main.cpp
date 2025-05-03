@@ -21,9 +21,12 @@ const float PLAYER_SPEED = 5.0f;
 const float INITIAL_OBJECT_SPEED = 3.0f;
 const float SPEED_INCREMENT = 0.5f;
 const int SPEED_INCREASE_INTERVAL = 10000; // 10 giây
-const int SPAWN_INTERVAL = 500; // ms
+const int SPAWN_INTERVAL = 500; // Ban đầu 0.5 giây
+const int SPAWN_INTERVAL_DECREASE_RATE = 50; // Giảm 50ms mỗi 30 giây
+const int SPAWN_INTERVAL_MIN = 100; // Giới hạn tối thiểu
 const int FLASH_COOLDOWN = 15000; // 15 giây (mili giây)
 const int FLASH_DISTANCE = 200; // Khoảng cách dịch chuyển
+const int READY_DISPLAY_TIME = 15000; // 15 giây hiển thị "Ready"
 
 struct GameObject {
     float x, y;
@@ -54,6 +57,7 @@ private:
     int score;
     int highScore;
     float currentObjectSpeed;
+    int currentSpawnInterval; // Khoảng thời gian spawn hiện tại
     enum class GameState { MENU, PLAYING, GAME_OVER };
     GameState state;
     int menuSelection;
@@ -307,6 +311,7 @@ public:
              targetX(playerX), targetY(playerY),
              running(true), lastSpawnTime(0), gameStartTime(0), lastFlashTime(0),
              score(0), highScore(0), currentObjectSpeed(INITIAL_OBJECT_SPEED),
+             currentSpawnInterval(SPAWN_INTERVAL),
              state(GameState::MENU), menuSelection(0) {
         srand(time(nullptr));
         loadHighScore();
@@ -352,6 +357,7 @@ public:
                                 score = 0;
                                 objects.clear();
                                 currentObjectSpeed = INITIAL_OBJECT_SPEED;
+                                currentSpawnInterval = SPAWN_INTERVAL;
                                 Mix_PlayMusic(bgMusic, -1);
                             } else if (menuSelection == 1) { // Load state
                                 if (loadGameState()) {
@@ -409,7 +415,14 @@ public:
                 movePlayerToTarget();
 
                 Uint32 currentTime = SDL_GetTicks();
-                if (currentTime - lastSpawnTime > SPAWN_INTERVAL) {
+                // Giảm SPAWN_INTERVAL theo thời gian
+                Uint32 elapsedTime = currentTime - gameStartTime;
+                if (elapsedTime / 30000 > 0) { // Mỗi 30 giây
+                    int decreaseCount = elapsedTime / 30000; // Số lần giảm
+                    currentSpawnInterval = max(SPAWN_INTERVAL - (decreaseCount * SPAWN_INTERVAL_DECREASE_RATE), SPAWN_INTERVAL_MIN);
+                }
+
+                if (currentTime - lastSpawnTime > currentSpawnInterval) {
                     updateObjectSpeed();
                     spawnObject();
                     lastSpawnTime = currentTime;
@@ -458,12 +471,12 @@ public:
                 SDL_Rect logoRect = {(WINDOW_WIDTH / 2) - 25, WINDOW_HEIGHT - 80, 50, 50}; // Kích thước logo 50x50
                 SDL_RenderCopy(renderer, logoTexture, nullptr, &logoRect);
 
-                // Hiển thị thời gian hồi chiêu trên logo
+                // Hiển thị thời gian hồi chiêu hoặc "Ready" trên logo
                 int cooldownTimeRemaining = (FLASH_COOLDOWN - (currentTime - lastFlashTime)) / 1000;
                 if (cooldownTimeRemaining > 0) {
                     string cooldownText = to_string(cooldownTimeRemaining) + "s";
                     renderTextCentered(cooldownText, WINDOW_WIDTH / 2, WINDOW_HEIGHT - 110, textColor);
-                } else {
+                } else if (currentTime <= lastFlashTime + FLASH_COOLDOWN + READY_DISPLAY_TIME) {
                     renderTextCentered("Ready", WINDOW_WIDTH / 2, WINDOW_HEIGHT - 110, textColor);
                 }
 
