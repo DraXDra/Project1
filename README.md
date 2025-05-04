@@ -1,5 +1,7 @@
 Dodge Game
 
+
+
 Tính năng
 
 Hai chế độ chơi:
@@ -49,13 +51,21 @@ Mưa: Giảm tốc độ người chơi 20%, hiển thị các giọt nước r�
 Sương mù: Giảm tầm nhìn bằng một lớp phủ mờ trên màn hình.
 
 Cấu trúc mã nguồn
+
 Mã nguồn được chia thành các file để dễ quản lý và bảo trì:
 
 Constants.h: Các hằng số toàn cục.
+
 GameObject.h/cpp: Quản lý các đối tượng (chướng ngại vật, giọt nước).
+
 WeatherSystem.h/cpp: Hệ thống thời tiết.
+
 HighScore.h/cpp: Quản lý điểm cao.
+
 Utils.h/cpp: Các hàm tiện ích (hiển thị văn bản).
+
 Game.h/cpp: Lớp chính của trò chơi.
+
 main.cpp: Điểm vào chương trình.
+
 
