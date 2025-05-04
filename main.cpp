@@ -18,6 +18,7 @@ const int PLAYER_WIDTH = 50;
 const int PLAYER_HEIGHT = 50;
 const int OBJECT_SIZE = 30;
 const float PLAYER_SPEED = 5.0f;
+const float RAIN_PLAYER_SPEED = PLAYER_SPEED * 0.8f; // Giảm 20% tốc độ khi mưa
 const float INITIAL_OBJECT_SPEED = 3.0f;
 const float SPEED_INCREMENT = 0.5f;
 const int SPEED_INCREASE_INTERVAL = 10000; // 10 giây
@@ -29,12 +30,18 @@ const int FLASH_COOLDOWN = 15000; // 15 giây (mili giây)
 const int FLASH_DISTANCE = 200; // Khoảng cách dịch chuyển
 const int READY_DISPLAY_TIME = 15000; // 15 giây hiển thị "Ready"
 const int SURVIVAL_RUSH_DURATION = 60000; // 60 giây (Survival Rush)
+const int CLASSIC_WEATHER_INTERVAL = 30000; // 30 giây (Classic)
+const int CLASSIC_WEATHER_DURATION = 10000; // 10 giây (Classic)
+const int SURVIVAL_WEATHER_INTERVAL = 10000; // 10 giây (Survival Rush)
+const int SURVIVAL_WEATHER_DURATION = 5000; // 5 giây (Survival Rush)
 
 struct GameObject {
     float x, y;
     float dx, dy;
     SDL_Texture* texture;
 };
+
+enum class WeatherEffect { NONE, RAIN, FOG };
 
 class Game {
 private:
@@ -64,6 +71,10 @@ private:
     enum class GameState { MENU, PLAYING, PLAYING_SURVIVAL, GAME_OVER };
     GameState state;
     int menuSelection;
+    WeatherEffect currentWeather; // Trạng thái thời tiết hiện tại
+    Uint32 weatherStartTime; // Thời gian bắt đầu hiệu ứng thời tiết
+    Uint32 weatherDuration; // Thời gian kéo dài hiệu ứng thời tiết
+    Uint32 lastWeatherChange; // Thời gian thay đổi thời tiết cuối cùng
 
     bool initSDL() {
         if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO) < 0) {
@@ -181,8 +192,9 @@ private:
             float dx = targetX - playerX;
             float dy = targetY - playerY;
             float dist = distance(playerX, playerY, targetX, targetY);
-            float moveX = (dx / dist) * PLAYER_SPEED;
-            float moveY = (dy / dist) * PLAYER_SPEED;
+            float effectiveSpeed = (currentWeather == WeatherEffect::RAIN) ? RAIN_PLAYER_SPEED : PLAYER_SPEED;
+            float moveX = (dx / dist) * effectiveSpeed;
+            float moveY = (dy / dist) * effectiveSpeed;
 
             if (abs(moveX) > abs(dx)) moveX = dx;
             if (abs(moveY) > abs(dy)) moveY = dy;
@@ -293,6 +305,31 @@ private:
         }
     }
 
+    void updateWeather() {
+        Uint32 currentTime = SDL_GetTicks();
+        Uint32 elapsedTime = currentTime - lastWeatherChange;
+
+        // Kiểm tra thời gian để thay đổi thời tiết
+        int weatherInterval = (state == GameState::PLAYING) ? CLASSIC_WEATHER_INTERVAL : SURVIVAL_WEATHER_INTERVAL;
+        if (elapsedTime >= weatherInterval) {
+            // Nếu đang có hiệu ứng, kiểm tra xem đã hết thời gian chưa
+            if (currentWeather != WeatherEffect::NONE && (currentTime - weatherStartTime) >= weatherDuration) {
+                currentWeather = WeatherEffect::NONE;
+                lastWeatherChange = currentTime;
+                return;
+            }
+
+            // Nếu không có hiệu ứng, chọn ngẫu nhiên một hiệu ứng mới
+            if (currentWeather == WeatherEffect::NONE) {
+                int weatherType = rand() % 2; // 0: Rain, 1: Fog
+                currentWeather = (weatherType == 0) ? WeatherEffect::RAIN : WeatherEffect::FOG;
+                weatherStartTime = currentTime;
+                weatherDuration = (state == GameState::PLAYING) ? CLASSIC_WEATHER_DURATION : SURVIVAL_WEATHER_DURATION;
+                lastWeatherChange = currentTime;
+            }
+        }
+    }
+
     void renderText(const string& text, int y, SDL_Color color) {
         SDL_Surface* surface = TTF_RenderText_Solid(font, text.c_str(), color);
         SDL_Texture* texture = SDL_CreateTextureFromSurface(renderer, surface);
@@ -335,6 +372,16 @@ private:
         SDL_RenderPresent(renderer);
     }
 
+    void renderWeather() {
+        if (currentWeather == WeatherEffect::FOG) {
+            SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND);
+            SDL_SetRenderDrawColor(renderer, 255, 255, 255, 100); // Màu trắng mờ
+            SDL_Rect fogRect = {0, 0, WINDOW_WIDTH, WINDOW_HEIGHT};
+            SDL_RenderFillRect(renderer, &fogRect);
+            SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_NONE);
+        }
+    }
+
 public:
     Game() : window(nullptr), renderer(nullptr), playerTexture(nullptr), obstacleTexture(nullptr),
              backgroundTexture(nullptr), logoTexture(nullptr), bgMusic(nullptr), hitSound(nullptr), font(nullptr),
@@ -344,7 +391,8 @@ public:
              running(true), lastSpawnTime(0), gameStartTime(0), lastFlashTime(0),
              score(0), highScoreClassic(0), highScoreSurvivalRush(0), currentObjectSpeed(INITIAL_OBJECT_SPEED),
              currentSpawnInterval(SPAWN_INTERVAL),
-             state(GameState::MENU), menuSelection(0) {
+             state(GameState::MENU), menuSelection(0),
+             currentWeather(WeatherEffect::NONE), weatherStartTime(0), weatherDuration(0), lastWeatherChange(0) {
         srand(time(nullptr));
         loadHighScores();
     }
@@ -386,6 +434,8 @@ public:
                             if (menuSelection == 0) { // Play (Classic)
                                 state = GameState::PLAYING;
                                 gameStartTime = SDL_GetTicks();
+                                lastWeatherChange = gameStartTime;
+                                currentWeather = WeatherEffect::NONE;
                                 score = 0;
                                 objects.clear();
                                 currentObjectSpeed = INITIAL_OBJECT_SPEED;
@@ -395,6 +445,8 @@ public:
                             } else if (menuSelection == 1) { // Survival Rush
                                 state = GameState::PLAYING_SURVIVAL;
                                 gameStartTime = SDL_GetTicks();
+                                lastWeatherChange = gameStartTime;
+                                currentWeather = WeatherEffect::NONE;
                                 score = 0;
                                 objects.clear();
                                 currentObjectSpeed = INITIAL_OBJECT_SPEED;
@@ -457,6 +509,7 @@ public:
                 renderMenu();
             } else if (state == GameState::PLAYING || state == GameState::PLAYING_SURVIVAL) {
                 movePlayerToTarget();
+                updateWeather(); // Cập nhật thời tiết
 
                 Uint32 currentTime = SDL_GetTicks();
                 if (state == GameState::PLAYING) {
@@ -534,6 +587,8 @@ public:
                     SDL_RenderCopy(renderer, obj.texture, nullptr, &objRect);
                 }
 
+                renderWeather(); // Vẽ hiệu ứng thời tiết
+
                 renderText("Score: " + to_string(score), 10, textColor);
                 if (state == GameState::PLAYING) {
                     renderText("Press S to save game", 40, textColor);
@@ -541,6 +596,17 @@ public:
                     int timeLeft = (SURVIVAL_RUSH_DURATION - (currentTime - gameStartTime)) / 1000;
                     renderText("Time Left: " + to_string(timeLeft) + "s", 40, textColor);
                 }
+
+                // Hiển thị trạng thái thời tiết
+                string weatherText = "Weather: ";
+                if (currentWeather == WeatherEffect::RAIN) {
+                    weatherText += "Rain";
+                } else if (currentWeather == WeatherEffect::FOG) {
+                    weatherText += "Fog";
+                } else {
+                    weatherText += "Clear";
+                }
+                renderText(weatherText, 70, textColor);
 
                 // Vẽ logo chỉ trong gameplay
                 SDL_Rect logoRect = {(WINDOW_WIDTH / 2) - 25, WINDOW_HEIGHT - 80, 50, 50}; // Kích thước logo 50x50
