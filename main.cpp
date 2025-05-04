@@ -41,6 +41,12 @@ struct GameObject {
     SDL_Texture* texture;
 };
 
+struct RainDrop {
+    float x, y;
+    float speed;
+    int length;
+};
+
 enum class WeatherEffect { NONE, RAIN, FOG };
 
 class Game {
@@ -59,6 +65,7 @@ private:
     float playerX, playerY;
     float targetX, targetY;
     vector<GameObject> objects;
+    vector<RainDrop> rainDrops;
     bool running;
     Uint32 lastSpawnTime;
     Uint32 gameStartTime;
@@ -177,6 +184,17 @@ private:
         }
         obj.texture = obstacleTexture;
         objects.push_back(obj);
+    }
+
+    void spawnRainDrop() {
+        if (currentWeather == WeatherEffect::RAIN) {
+            RainDrop drop;
+            drop.x = rand() % WINDOW_WIDTH;
+            drop.y = -10; // Bắt đầu từ trên đỉnh màn hình
+            drop.speed = 5.0f + static_cast<float>(rand() % 5); // Tốc độ ngẫu nhiên từ 5 đến 9
+            drop.length = 10 + rand() % 10; // Chiều dài ngẫu nhiên từ 10 đến 19
+            rainDrops.push_back(drop);
+        }
     }
 
     bool checkCollision(float x1, float y1, int w1, int h1, float x2, float y2, int w2, int h2) {
@@ -315,6 +333,7 @@ private:
             // Nếu đang có hiệu ứng, kiểm tra xem đã hết thời gian chưa
             if (currentWeather != WeatherEffect::NONE && (currentTime - weatherStartTime) >= weatherDuration) {
                 currentWeather = WeatherEffect::NONE;
+                rainDrops.clear(); // Xóa các giọt nước khi hết hiệu ứng
                 lastWeatherChange = currentTime;
                 return;
             }
@@ -326,6 +345,21 @@ private:
                 weatherStartTime = currentTime;
                 weatherDuration = (state == GameState::PLAYING) ? CLASSIC_WEATHER_DURATION : SURVIVAL_WEATHER_DURATION;
                 lastWeatherChange = currentTime;
+            }
+        }
+
+        // Spawn giọt mưa khi đang có hiệu ứng mưa
+        if (currentWeather == WeatherEffect::RAIN && rand() % 10 == 0) { // Ngẫu nhiên spawn giọt nước (10% mỗi frame)
+            spawnRainDrop();
+        }
+
+        // Cập nhật vị trí các giọt nước
+        for (auto it = rainDrops.begin(); it != rainDrops.end();) {
+            it->y += it->speed;
+            if (it->y > WINDOW_HEIGHT) {
+                it = rainDrops.erase(it);
+            } else {
+                ++it;
             }
         }
     }
@@ -379,6 +413,11 @@ private:
             SDL_Rect fogRect = {0, 0, WINDOW_WIDTH, WINDOW_HEIGHT};
             SDL_RenderFillRect(renderer, &fogRect);
             SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_NONE);
+        } else if (currentWeather == WeatherEffect::RAIN) {
+            SDL_SetRenderDrawColor(renderer, 0, 0, 255, 150); // Màu xanh dương nhạt cho giọt nước
+            for (const auto& drop : rainDrops) {
+                SDL_RenderDrawLine(renderer, drop.x, drop.y, drop.x, drop.y + drop.length);
+            }
         }
     }
 
@@ -509,24 +548,22 @@ public:
                 renderMenu();
             } else if (state == GameState::PLAYING || state == GameState::PLAYING_SURVIVAL) {
                 movePlayerToTarget();
-                updateWeather(); // Cập nhật thời tiết
+                updateWeather();
 
                 Uint32 currentTime = SDL_GetTicks();
                 if (state == GameState::PLAYING) {
-                    // Giảm SPAWN_INTERVAL theo thời gian (chỉ ở chế độ Classic)
                     Uint32 elapsedTime = currentTime - gameStartTime;
-                    if (elapsedTime / 30000 > 0) { // Mỗi 30 giây
-                        int decreaseCount = elapsedTime / 30000; // Số lần giảm
+                    if (elapsedTime / 30000 > 0) {
+                        int decreaseCount = elapsedTime / 30000;
                         currentSpawnInterval = max(SPAWN_INTERVAL - (decreaseCount * SPAWN_INTERVAL_DECREASE_RATE), SPAWN_INTERVAL_MIN);
                     }
                 }
 
-                // Kiểm tra thời gian trong Survival Rush
                 if (state == GameState::PLAYING_SURVIVAL) {
                     Uint32 elapsedTime = currentTime - gameStartTime;
                     if (elapsedTime >= SURVIVAL_RUSH_DURATION) {
                         Mix_HaltMusic();
-                        updateScore(); // Cập nhật điểm số cuối cùng
+                        updateScore();
                         cout << "Survival Rush ended. Final score: " << score << endl;
                         if (score > highScoreSurvivalRush) {
                             highScoreSurvivalRush = score;
@@ -558,7 +595,7 @@ public:
                                        it->x, it->y, OBJECT_SIZE, OBJECT_SIZE)) {
                         Mix_PlayChannel(-1, hitSound, 0);
                         Mix_HaltMusic();
-                        updateScore(); // Cập nhật điểm số cuối cùng
+                        updateScore();
                         cout << "Collision detected. Final score: " << score << endl;
                         if (state == GameState::PLAYING && score > highScoreClassic) {
                             highScoreClassic = score;
@@ -574,7 +611,7 @@ public:
                     ++it;
                 }
 
-                updateScore(); // Cập nhật điểm số liên tục
+                updateScore();
 
                 SDL_Rect bgRect = {0, 0, WINDOW_WIDTH, WINDOW_HEIGHT};
                 SDL_RenderCopy(renderer, backgroundTexture, nullptr, &bgRect);
@@ -587,7 +624,7 @@ public:
                     SDL_RenderCopy(renderer, obj.texture, nullptr, &objRect);
                 }
 
-                renderWeather(); // Vẽ hiệu ứng thời tiết
+                renderWeather();
 
                 renderText("Score: " + to_string(score), 10, textColor);
                 if (state == GameState::PLAYING) {
@@ -597,7 +634,6 @@ public:
                     renderText("Time Left: " + to_string(timeLeft) + "s", 40, textColor);
                 }
 
-                // Hiển thị trạng thái thời tiết
                 string weatherText = "Weather: ";
                 if (currentWeather == WeatherEffect::RAIN) {
                     weatherText += "Rain";
@@ -608,11 +644,9 @@ public:
                 }
                 renderText(weatherText, 70, textColor);
 
-                // Vẽ logo chỉ trong gameplay
                 SDL_Rect logoRect = {(WINDOW_WIDTH / 2) - 25, WINDOW_HEIGHT - 80, 50, 50}; // Kích thước logo 50x50
                 SDL_RenderCopy(renderer, logoTexture, nullptr, &logoRect);
 
-                // Hiển thị thời gian hồi chiêu hoặc "Ready" trên logo
                 Uint32 timeSinceLastFlash = currentTime - lastFlashTime;
                 if (timeSinceLastFlash < FLASH_COOLDOWN) {
                     int cooldownTimeRemaining = (FLASH_COOLDOWN - timeSinceLastFlash) / 1000;
@@ -634,7 +668,7 @@ public:
                 SDL_RenderPresent(renderer);
             }
 
-            SDL_Delay(16); // ~60 FPS
+            SDL_Delay(16);
         }
     }
 };
