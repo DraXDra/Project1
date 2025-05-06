@@ -1,5 +1,5 @@
 # Dodge Game
-
+![](https://cdn.discordapp.com/attachments/1297191830680764520/1369305392462565518/image.png?ex=681b6086&is=681a0f06&hm=296ba82185f2f86fd7deaa664d337b1152ead5431570696407c8649390489786&)
 ## Lối chơi & Logic của Game
 
 **Dodge Game** là trò chơi né tránh, trong đó người chơi điều khiển nhân vật để tránh các chướng ngại vật rơi từ bốn phía (trên, dưới, trái, phải). Mục tiêu là sống sót càng lâu càng tốt.
