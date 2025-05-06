@@ -51,10 +51,10 @@
 
 ### Thua:
 - Va chạm với chướng ngại vật.
-- Trong Survival Rush: Hết thời gian mà chưa sống sót.
+- Trong Survival Rush: Va chạm với chướng ngại vật khi chưa 60s.
 
 ### Thắng:
-- **Classic**: Không có kết thúc, chơi đến khi thua.
+- **Classic**: Không có chiến thắng, chơi đến khi thua.
 - **Survival Rush**: Sống sót hết 60 giây → ghi nhận điểm cao.
 
 ---
