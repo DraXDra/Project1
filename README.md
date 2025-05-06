@@ -1,76 +1,162 @@
 # Dodge Game
 
-## Tính năng
+## Lối chơi & Logic của Game
 
-### Hai chế độ chơi:
+**Dodge Game** là trò chơi né tránh, trong đó người chơi điều khiển nhân vật để tránh các chướng ngại vật rơi từ bốn phía (trên, dưới, trái, phải). Mục tiêu là sống sót càng lâu càng tốt.
 
-- **Classic**: Né tránh chướng ngại vật càng lâu càng tốt, với độ khó tăng dần theo thời gian.
-- **Survival Rush**: Sống sót trong 60 giây với mật độ chướng ngại vật cao hơn.
-
-### Hiệu ứng thời tiết:
-
-- **Mưa**: Giảm tốc độ người chơi 20% và hiển thị các giọt nước rơi.
-- **Sương mù**: Giảm tầm nhìn bằng lớp phủ mờ trên màn hình.
-- **Thay đổi ngẫu nhiên**:
-  - Classic: Mỗi 30 giây (kéo dài 10 giây).
-  - Survival Rush: Mỗi 10 giây (kéo dài 5 giây).
-
-### Kỹ năng Flash:
-- Dịch chuyển nhanh theo hướng chuột với thời gian hồi chiêu 15 giây.
-
-### Lưu và tải game:
-- Hỗ trợ lưu tiến trình trong chế độ **Classic**.
-
-### Điểm cao:
-- Lưu trữ và hiển thị điểm cao nhất cho cả hai chế độ.
+### Logic chính:
+- Di chuyển nhân vật mượt mà theo vị trí con trỏ chuột.
+- Tạo chướng ngại vật ngẫu nhiên với tốc độ và tần suất tăng dần.
+- Áp dụng hiệu ứng thời tiết để tăng thử thách.
+- Quản lý các trạng thái trò chơi và chế độ chơi khác nhau.
 
 ---
 
-## Cách chơi
+## Chướng Ngại Vật
 
-### Điều khiển:
-
-- **Di chuyển**: Sử dụng chuột để di chuyển nhân vật đến vị trí con trỏ.
-- **Flash**: Nhấn phím `F` để dịch chuyển nhanh (hồi chiêu 15 giây).
-- **Lưu game**: Nhấn phím `S` trong chế độ Classic để lưu và quay lại menu.
-
-### Menu:
-
-- Dùng phím **Lên/Xuống** để chọn tùy chọn.
-- Nhấn **Enter** để xác nhận.
+- Hình dạng: Hình vuông (30x30 pixel).
+- Vị trí xuất hiện: Ngẫu nhiên ngoài màn hình (trên, dưới, trái, phải).
+- Vận tốc: Di chuyển thẳng vào màn hình.
+- Tốc độ: Bắt đầu từ 3 pixel/frame, tăng dần trong chế độ Classic.
+- Texture: Dùng ảnh `assets/obstacle.png`.
 
 ---
 
-## Chế độ chơi
+## Các chế độ chơi
 
 ### Classic:
-
-- Mục tiêu là né tránh chướng ngại vật càng lâu càng tốt.
-- Mỗi 30 giây, một hiệu ứng thời tiết xuất hiện trong 10 giây.
-- Điểm số tăng theo thời gian sống sót.
+- **Mục tiêu**: Sống sót càng lâu càng tốt.
+- **Tần suất chướng ngại vật**: Bắt đầu từ 0.5 giây, giảm mỗi 30 giây (tối thiểu 0.1 giây).
+- **Tốc độ chướng ngại vật**: Tăng 0.5 mỗi 10 giây.
+- **Hiệu ứng thời tiết**: Xuất hiện mỗi 30 giây, kéo dài 10 giây.
 
 ### Survival Rush:
-
-- Sống sót trong 60 giây với mật độ chướng ngại vật cao.
-- Mỗi 10 giây, một hiệu ứng thời tiết xuất hiện trong 5 giây.
-
----
-
-## Hiệu ứng thời tiết
-
-- **Mưa**: Giảm tốc độ người chơi và hiển thị giọt nước rơi.
-- **Sương mù**: Lớp phủ mờ giảm tầm nhìn trên màn hình.
+- **Mục tiêu**: Sống sót 60 giây.
+- **Tần suất chướng ngại vật**: 0.2 giây.
+- **Tốc độ**: Không thay đổi.
+- **Hiệu ứng thời tiết**: Thay đổi mỗi 10 giây, kéo dài 5 giây.
 
 ---
 
-## Cấu trúc mã nguồn
+## Trạng Thái Trò Chơi
 
-Mã nguồn được tổ chức thành các file để dễ quản lý và bảo trì:
+1. **MENU**: Hiển thị menu chính (Play Classic, Survival Rush, Load Game, Exit).
+2. **PLAYING**: Chơi chế độ Classic.
+3. **PLAYING_SURVIVAL**: Chơi chế độ Survival Rush.
+4. **GAME_OVER**: Khi va chạm hoặc hết thời gian, hiển thị điểm số và tùy chọn quay lại menu.
 
-- `Constants.h`: Chứa các hằng số toàn cục như kích thước màn hình, tốc độ, và thời gian.
-- `GameObject.h/cpp`: Quản lý chướng ngại vật và giọt nước (hiệu ứng mưa).
-- `WeatherSystem.h/cpp`: Xử lý logic và hiển thị hiệu ứng thời tiết.
-- `HighScore.h/cpp`: Quản lý lưu trữ và cập nhật điểm cao.
-- `Utils.h/cpp`: Cung cấp các hàm tiện ích để hiển thị văn bản.
-- `Game.h/cpp`: Lớp chính điều phối trò chơi, xử lý sự kiện, cập nhật trạng thái, và vẽ giao diện.
-- `main.cpp`: Điểm vào chương trình, khởi tạo và chạy trò chơi.
+---
+
+## Logic Thắng/Thua
+
+### Thua:
+- Va chạm với chướng ngại vật.
+- Trong Survival Rush: Hết thời gian mà chưa sống sót.
+
+### Thắng:
+- **Classic**: Không có kết thúc, chơi đến khi thua.
+- **Survival Rush**: Sống sót hết 60 giây → ghi nhận điểm cao.
+
+---
+
+## Tăng Độ Khó
+
+### Classic:
+- Tăng tốc độ chướng ngại vật 0.5 mỗi 10 giây.
+- Giảm thời gian tạo chướng ngại vật 50ms mỗi 30 giây (tối thiểu 100ms).
+- Thêm hiệu ứng thời tiết (mưa, sương mù).
+
+### Survival Rush:
+- Tần suất cao hơn ngay từ đầu (0.2 giây).
+- Hiệu ứng thời tiết thay đổi nhanh hơn (mỗi 10 giây).
+
+---
+
+## Âm Thanh
+
+- **Nhạc nền**: `assets/background_music.mp3`, phát liên tục.
+- **Hiệu ứng va chạm**: `assets/hit.mp3`, phát khi va chạm.
+- **Quản lý âm thanh**: Sử dụng SDL_mixer, mỗi âm thanh phát ở kênh riêng.
+
+---
+
+## Hệ Thống Điểm
+
+- **Tăng điểm**: 1 giây sống sót = 10 điểm.
+- **Highscore**:
+  - Classic: Lưu vào `highscore_classic.txt`.
+  - Survival Rush: Lưu vào `highscore_survivalrush.txt`.
+- **Hiển thị**: Trong menu, cập nhật sau mỗi game.
+
+---
+
+## Các Thành Phần Chính
+
+- **Nhân vật**: Hình vuông 50x50 pixel, di chuyển theo chuột, có kỹ năng **Flash**:
+  - Dịch chuyển 200 pixel theo hướng chuột.
+  - Hồi chiêu: 15 giây.
+- **Chướng ngại vật**: Xuất hiện từ 4 phía, tốc độ tăng theo thời gian (Classic).
+- **Hiệu ứng thời tiết**:
+  - **Mưa**: Giảm tốc độ người chơi 20%, hiển thị giọt nước.
+  - **Sương mù**: Lớp phủ mờ, giảm tầm nhìn.
+- **Giao diện**:
+  - Hiển thị điểm số, thời tiết, hồi chiêu Flash, thời gian còn lại (Survival Rush).
+
+---
+
+## Hành Vi Chướng Ngại Vật
+
+- **Xuất hiện**: Ngẫu nhiên từ 1 trong 4 phía.
+- **Di chuyển**: Theo hướng vào màn hình, tốc độ tùy chế độ.
+- **Xóa khỏi bộ nhớ**: Khi vượt khỏi màn hình.
+
+---
+
+## Kiểm Tra Va Chạm
+
+- So sánh hình chữ nhật bao quanh:
+  - Nhân vật: 50x50 pixel.
+  - Chướng ngại vật: 30x30 pixel.
+- **Nếu giao nhau → Game Over**.
+
+---
+
+## Vòng Lặp Trò Chơi
+
+Thực hiện trong `Game::run`:
+
+1. **Xử lý sự kiện**:
+   - Chuột: Di chuyển.
+   - Bàn phím: Flash, lưu game, menu.
+
+2. **Cập nhật trạng thái**:
+   - Nhân vật di chuyển theo chuột.
+   - Tạo & cập nhật chướng ngại vật.
+   - Cập nhật thời tiết.
+   - Kiểm tra va chạm & thời gian sống.
+
+3. **Vẽ giao diện**:
+   - Nền, nhân vật, chướng ngại vật.
+   - Hiệu ứng thời tiết.
+   - Văn bản (điểm, hồi chiêu, thời gian còn lại).
+
+4. **Giới hạn tốc độ khung hình**:
+   - Delay 16ms mỗi frame (~60 FPS).
+
+---
+
+## Công Cụ & Nguồn Tham Khảo
+
+### Công cụ:
+- **SDL2**: Đồ họa, âm thanh, đầu vào.
+- **SDL_image**: Tải hình ảnh PNG.
+- **SDL_mixer**: Quản lý âm thanh.
+- **SDL_ttf**: Hiển thị văn bản.
+
+### Tài nguyên & Tham khảo:
+- [Tài liệu SDL2](https://wiki.libsdl.org/)
+- [Hướng dẫn lập trình game với SDL]
+- [GitHub - LoL Dodge Game](https://github.com/jaingmengmeng/LoL-Dodge-Game/tree/master)
+- [GitHub - Dodge Game SDL](https://github.com/Hert4/dodge_game/tree/main)
+- ChatGPT hỗ trợ viết logic, tạo hình ảnh và sửa lỗi.
+- Tài nguyên đồ họa/âm thanh: Tự tạo hoặc nguồn miễn phí.
